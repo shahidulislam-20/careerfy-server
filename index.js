@@ -10,9 +10,8 @@ const port = process.env.PORT || 5000;
 //middleware
 app.use(cors({
     origin: [
-        
         'https://careerfy-5b523.web.app',
-        'https://careerfy-5b523.firebaseapp.com/'
+        'https://careerfy-5b523.firebaseapp.com'
     ],
     credentials: true
 }));
@@ -64,16 +63,13 @@ async function run() {
 
         app.post('/jwt', async (req, res) => {
             const user = req.body;
-            console.log(user);
-
             const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
-            res
-                .cookie('token', token, {
+
+            res.cookie('token', token, {
                     httpOnly: true,
                     secure: false,
                     sameSite: false
-                })
-                .send({ success: true });
+            }).send({ success: true });
         })
 
         app.post('/logout', async (req, res) => {
@@ -111,9 +107,9 @@ async function run() {
             res.send(result);
         })
 
-        app.get('/applied-jobs/', verifyToken, async (req, res) => {
-            const email = req.query.email;
-            if(email !== req.user.email){
+        app.get('/applied-jobs', verifyToken, async (req, res) => {
+            const email = req.query?.email;
+            if(email !== req.user?.email){
                 return res.status(403).send({message: 'forbidden access'});
             }
             const query = { email: email };
