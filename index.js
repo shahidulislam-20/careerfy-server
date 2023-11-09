@@ -50,7 +50,6 @@ const verifyToken = async (req, res, next) => {
         req.user = decoded;
         next();
     })
-
 }
 
 async function run() {
