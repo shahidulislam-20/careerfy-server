@@ -1,22 +1,14 @@
 const express = require('express');
 var cors = require('cors')
-const jwt = require('jsonwebtoken');
-const cookieParser = require('cookie-parser');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 5000;
 
 //middleware
-app.use(cors({
-    origin: [
-        'https://careerfy-5b523.web.app',
-        'https://careerfy-5b523.firebaseapp.com'
-    ],
-    credentials: true
-}));
+app.use(cors());
 app.use(express.json());
-app.use(cookieParser());
+
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.zgm5tdq.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -29,27 +21,6 @@ const client = new MongoClient(uri, {
     }
 });
 
-//custom middlewares
-const logger = async (req, res, next) => {
-    // console.log('called', req.hostname, req.originalUrl)
-    next()
-}
-
-const verifyToken = async (req, res, next) => {
-    const token = req.cookies?.token;
-    console.log('token is', token)
-    if (!token) {
-        return res.status(401).send({ message: 'not authorized' })
-    }
-    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
-        if (err) {
-            return res.status(401).send({ message: 'unauthorized' })
-        }
-        console.log('the token is decoded: ', decoded);
-        req.user = decoded;
-        next();
-    })
-}
 
 async function run() {
     try {
@@ -59,23 +30,7 @@ async function run() {
         const jobsCollection = client.db("careerfy").collection("jobs");
         const appliedJobsCollection = client.db("careerfy").collection("appliedJobs");
 
-        app.post('/jwt', async (req, res) => {
-            const user = req.body;
-            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
-            res.cookie('token', token, {
-                    httpOnly: true,
-                    secure: false,
-                    sameSite: false
-            }).send({ success: true });
-        })
-
-        app.post('/logout', async (req, res) => {
-            const user = req.body;
-            console.log('logging out user', user);
-            res.clearCookie('token', { maxAge: 0 }).send({ success: true });
-        })
-
-        app.get('/jobs', logger, async (req, res) => {
+        app.get('/jobs', async (req, res) => {
             const cursor = await jobsCollection.find().toArray();
             res.send(cursor);
         })
@@ -94,21 +49,15 @@ async function run() {
             res.send(result);
         })
 
-        app.get('/jobs/:email', verifyToken, async (req, res) => {
+        app.get('/jobs/:email', async (req, res) => {
             const email = req.params.email;
-            if(email !== req.user.email){
-                return res.status(403).send({message: 'forbidden access'});
-            }
             const query = { email: email };
             const result = await jobsCollection.find(query).toArray();
             res.send(result);
         })
 
-        app.get('/applied-jobs', verifyToken, async (req, res) => {
+        app.get('/applied-jobs', async (req, res) => {
             const email = req.query?.email;
-            if(email !== req.user?.email){
-                return res.status(403).send({message: 'forbidden access'});
-            }
             const query = { email: email };
             const result = await appliedJobsCollection.find(query).toArray();
             res.send(result);
